@@ -2,42 +2,47 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreUserRequest;
+use App\Http\Requests\UpdateUserRequest;
 use App\Models\Hobby;
 use App\Models\User;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Validator;
 
 class UserController extends Controller
 {
     public function index(){
-        // data table user
-    }
-    public function create(){
-        // form input user
-    }
-    public function edit(){
-        // form edit user
-    }
+        $data = User::with('hobbies')
+            ->select('name', 'email', 'id')
+            ->paginate(10);
 
-    public function store(Request $r){
-        $validators = Validator::make($r->all(),[
-            'name' => 'required|string|max:100',
-            'email' => 'required|email|max:100|unique:users,email',
-            'password' => 'required|string|min:8',
-            'hobbies' => 'required|array',
-            'hobbies.*' => 'required|string|max:30'
+        return view('pages.users.index', [
+            'title' => 'Manajemen User & Hobby',
+            'data' => $data
         ]);
-
-        if($validators->fails()){
-            return back()
-                ->withErrors($validators)
-                ->withInput($r->except('password'));
+    }
+    public function show(string $userId){
+        try {
+            $item = User::with('hobbies')
+                ->select('name', 'email', 'id')
+                ->where('id', decrypt($userId))
+                ->first();
+    
+            return response()->json([
+                'status' => true,
+                'data' => $item ?: null
+            ]);
+        } catch (\Throwable $th) {
+            return response()->json([
+                'status' => false,
+                'data' => null
+            ]);
         }
+    }
 
+    public function store(StoreUserRequest $r){
         try {
             DB::beginTransaction();
             $user = User::create([
@@ -64,24 +69,10 @@ class UserController extends Controller
         }
     }
 
-    public function update(Request $r, $id){
-        $user = User::find(decrypt($id));
+    public function update(UpdateUserRequest $r, $id){
+        $user = User::find($r->getUserId());
         if(!$user){
             return back()->with('error', 'user tidak ditemukan');
-        }
-
-        $validators = Validator::make($r->all(),[
-            'name' => 'required|string|max:100',
-            'email' => 'required|email|max:100|unique:users,email,'.$user->id,
-            'password' => 'nullable|string|min:8',
-            'hobbies' => 'required|array',
-            'hobbies.*' => 'required|string|max:30'
-        ]);
-
-        if($validators->fails()){
-            return back()
-                ->withErrors($validators)
-                ->withInput($r->except('password'));
         }
 
         try {
@@ -111,10 +102,12 @@ class UserController extends Controller
         }
     }
 
-    public function delete($id){
+    public function destroy($id){
         try {
             $user = User::findOrFail(decrypt($id));
             $user->delete();
+            
+            return back()->with('success','Berhasil hapus data');
         } catch (ModelNotFoundException $e) {
             Log::error($e->getMessage());
             return back()
