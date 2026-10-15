@@ -1,4 +1,4 @@
-# Laravel 13 JWT Auth
+# User - Hobby APP
 
 Aplikasi Laravel 13 dengan Blade + Bootstrap 5, dengan autentikasi API berbasis JWT menggunakan package [`php-open-source-saver/jwt-auth`](https://github.com/PHP-Open-Source-Saver/jwt-auth) (namespace `PHPOpenSourceSaver\JWTAuth`).
 
